@@ -21,32 +21,42 @@ int in = 0;
 int out = 0;
 int empty = MAX_SIZE;
 int filled = 0;
+const int RUNTIME = 10;
+time_t begin, current;
 
 int buckets[MAX_SIZE];
 
 void *producer(void *index)
 {
     int item;
-
-    for(i = 0; i < MAX_SIZE; ++i){
-        item = rand();
+    do
+    {
+        current = time(NULL);
         pthread_mutex_lock(&buffer_lock);
+        item = rand();
         while (buffer_full)
         {
             pthread_cond_wait(&buffer_queue, &buffer_lock);
         }
 
-        buckets[in] = item;
-        printf("Producer %d: Insert Item %d at %d\n", *((int *)index), buckets[in], in);
-        in = (in + 1) % MAX_SIZE;
-        filled++;
+        if (buckets[in] == 0)
+        {
+            buckets[in] = item;
+            printf("Producer %d: Insert Item %d at %d\n", *((int *)index), buckets[in], in);
+            in = (in + 1) % MAX_SIZE;
+            filled++;
 
-        buffer_full = true;
+            buffer_full = true;
+        }
 
         pthread_mutex_unlock(&buffer_lock);
         pthread_cond_signal(&buffer_queue);
-    }
-    
+
+    } while (difftime(current, begin) < RUNTIME);
+    // for(i = 0; i < MAX_SIZE; ++i){
+
+    // }
+
     pthread_mutex_lock(&finished_lock);
 
     finished = true;
@@ -75,14 +85,16 @@ void *consumer(void *index)
         {
             pthread_cond_wait(&buffer_queue, &buffer_lock);
         }
-        int item = buckets[out];
-        buckets[out] = 0;
-        filled--;
+        if (buckets[out] != 0)
+        {
+            int item = buckets[out];
+            buckets[out] = 0;
+            filled--;
+            printf("Consumer %d: Remove Item %d from %d\n", *((int *)index), item, out);
+            out = (out + 1) % MAX_SIZE;
+            buffer_full = false;
+        }
 
-        printf("Consumer %d: Remove Item %d from %d\n", *((int *)index), item, out);
-        out = (out + 1) % MAX_SIZE;
-        
-        buffer_full = false;
         pthread_mutex_unlock(&buffer_lock);
         pthread_cond_signal(&buffer_queue);
     }
@@ -104,30 +116,27 @@ int main()
         buckets[i] = 0;
     }
 
-    time_t begin = time(NULL);
-    
-    // {
+    begin = time(NULL);
+
     pthread_create(&prod_threads[0], NULL, (void *)producer, (void *)&thread[0]);
     // }
 
     // for (i = 0; i < MAX_THREADS; i++)
     // {
-    pthread_create(&cons_threads[0], NULL, (void *)consumer, (void *)&thread[0]);
+        pthread_create(&cons_threads[0], NULL, (void *)consumer, (void *)&thread[0]);
     // }
-    
 
     // for (i = 0; i < MAX_THREADS; i++)
     // {
-    pthread_join(prod_threads[0], NULL);
+        pthread_join(prod_threads[0], NULL);
     // }
 
     // for (i = 0; i < 5; i++)
     // {
-    pthread_join(cons_threads[0], NULL);
+        pthread_join(cons_threads[0], NULL);
     // }
     pthread_mutex_destroy(&buffer_lock);
-    printf("The elapsed time is %ld seconds", (begin));
-
+    printf("The elapsed time is %ld seconds\n", (current - begin));
 
     return EXIT_SUCCESS;
 }
