@@ -7,6 +7,7 @@
 
 const int MAX_SIZE = 10;
 const int MAX_THREADS = 5;
+const int RUNTIME = 10;
 
 pthread_mutex_t buffer_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -21,7 +22,6 @@ int in = 0;
 int out = 0;
 int empty = MAX_SIZE;
 int filled = 0;
-const int RUNTIME = 20;
 time_t begin, current;
 
 int buckets[MAX_SIZE];
@@ -47,7 +47,6 @@ void *producer(void *index)
         if (buckets[in] == 0)
         {
             buckets[in] = item;
-            printf("Producer %d: Insert Item %d at %d\n", *((int *)index), buckets[in], in);
             in = (in + 1) % MAX_SIZE;
             filled++;
         }
@@ -115,29 +114,20 @@ int main()
         buckets[i] = 0;
     }
 
-    for (i = 0; i < 1; ++i)
+    for (i = 0; i < MAX_THREADS; ++i)
     {
         pthread_create(&prod_threads[i], NULL, (void *)producer, (void *)&thread[i]);
         pthread_create(&cons_threads[i], NULL, (void *)consumer, (void *)&thread[i]);
     }
 
-    // for (i = 0; i < 2; ++i)
-    // {
-
-    // }
-
-    for (i = 0; i < 2; ++i)
+    for (i = 0; i < MAX_THREADS; ++i)
     {
         pthread_join(prod_threads[i], NULL);
-    }
-
-    for (i = 0; i < 2; ++i)
-    {
-
         pthread_join(cons_threads[i], NULL);
+
     }
+
     pthread_mutex_destroy(&buffer_lock);
-    printf("The elapsed time is %ld seconds\n", (current - begin));
 
     return EXIT_SUCCESS;
 }
