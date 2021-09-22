@@ -5,14 +5,15 @@
 #include <stdbool.h>
 #include <time.h>
 
-const int MAX_SIZE = 10;
-const int MAX_THREADS = 5;
-const int RUNTIME = 10;
+#define MAX_SIZE 10
+#define MAX_THREADS 5
+#define RUNTIME 10
+#define EMPTY 0
 
-pthread_mutex_t buffer_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t array_lock = PTHREAD_MUTEX_INITIALIZER;
 
 bool isFilled = false;
-pthread_cond_t buffer_queue = PTHREAD_COND_INITIALIZER;
+pthread_cond_t is_ready = PTHREAD_COND_INITIALIZER;
 
 pthread_mutex_t finished_lock = PTHREAD_MUTEX_INITIALIZER;
 bool finished = false;
@@ -20,7 +21,6 @@ bool finished = false;
 int i;
 int in = 0;
 int out = 0;
-int empty = MAX_SIZE;
 int filled = 0;
 time_t begin, current;
 
@@ -39,20 +39,20 @@ void *producer(void *index)
             break;
         }
         item = rand();
-        pthread_mutex_lock(&buffer_lock);
+        pthread_mutex_lock(&array_lock);
         if (isFilled || filled == MAX_SIZE)
         {
-            pthread_cond_wait(&buffer_queue, &buffer_lock);
+            pthread_cond_wait(&is_ready, &array_lock);
         }
-        if (buckets[in] == 0)
+        if (buckets[in] == EMPTY)
         {
             buckets[in] = item;
             in = (in + 1) % MAX_SIZE;
             filled++;
         }
         isFilled = true;
-        pthread_mutex_unlock(&buffer_lock);
-        pthread_cond_signal(&buffer_queue);
+        pthread_mutex_unlock(&array_lock);
+        pthread_cond_signal(&is_ready);
     }
 
     pthread_mutex_lock(&finished_lock);
@@ -76,23 +76,23 @@ void *consumer(void *index)
         }
         pthread_mutex_unlock(&finished_lock);
 
-        pthread_mutex_lock(&buffer_lock);
-        if (!isFilled || filled == 0)
+        pthread_mutex_lock(&array_lock);
+        if (!isFilled || filled == EMPTY)
         {
-            pthread_cond_wait(&buffer_queue, &buffer_lock);
+            pthread_cond_wait(&is_ready, &array_lock);
         }
 
-        if (buckets[out] != 0)
+        if (buckets[out] != EMPTY)
         {
             int item = buckets[out];
-            buckets[out] = 0;
+            buckets[out] = EMPTY;
             filled--;
             printf("Consumer %d: Remove Item %d From Bucket %d\n", *((int *)index), item, out);
             out = (out + 1) % MAX_SIZE;
         }
         isFilled = false;
-        pthread_mutex_unlock(&buffer_lock);
-        pthread_cond_signal(&buffer_queue);
+        pthread_mutex_unlock(&array_lock);
+        pthread_cond_signal(&is_ready);
     }
 
     pthread_exit(NULL);
@@ -104,14 +104,14 @@ int main()
 
     pthread_t prod_threads[5], cons_threads[5];
 
-    pthread_mutex_init(&buffer_lock, NULL);
-    pthread_cond_init(&buffer_queue, NULL);
+    pthread_mutex_init(&array_lock, NULL);
+    pthread_cond_init(&is_ready, NULL);
 
     int thread[MAX_THREADS] = {1, 2, 3, 4, 5};
 
     for (i = 0; i < MAX_SIZE; i++)
     {
-        buckets[i] = 0;
+        buckets[i] = EMPTY;
     }
 
     for (i = 0; i < MAX_THREADS; ++i)
@@ -127,7 +127,7 @@ int main()
 
     }
 
-    pthread_mutex_destroy(&buffer_lock);
+    pthread_mutex_destroy(&array_lock);
 
     return EXIT_SUCCESS;
 }

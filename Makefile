@@ -1,14 +1,16 @@
 .default: all
 
-.default: all
-
-all: a1
+all: pc dp
 
 clean:
-	rm -f producerConsumer *.o
+	rm -f pc dp *.o
 
-a1: producerConsumer.o
+pc: producerConsumer.o
 	g++ -Wall -Werror -pedantic -std=c++17 -g -O -o $@ -pthread $^
+
+dp: diningPhilosophers.o
+	g++ -Wall -Werror -pedantic -std=c++17 -g -O -o $@ -pthread $^
+
 
 %.o: %.cpp
 	g++ -Wall -Werror -pedantic -std=c++17 -g -O -c $^
