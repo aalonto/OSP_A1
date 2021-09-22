@@ -28,10 +28,8 @@ void test_and_eat(int num)
 	{
 		phil_states[num] = EATING;
 
-		printf("Philosopher %d takes fork %d and %d.\n",
-			   num + 1, LEFT + 1, num + 1);
-
 		printf("Philosopher %d is eating.\n", num + 1);
+		sleep(RANDOM_TIME);
 
 		sem_post(&chopstick[num]);
 	}
@@ -53,10 +51,8 @@ void put_down_chopsticks(int num)
 {
 	pthread_mutex_lock(&lock);
 
-	printf("Philosopher %d is putting fork %d and %d down.\n",
-		   num + 1, LEFT + 1, RIGHT + 1);
+	printf("Philosopher %d has finished eating.\n", num + 1);
 
-	printf("Philosopher %d is thinking.\n", num + 1);
 	phil_states[num] = THINKING;
 
 	test_and_eat(LEFT);
@@ -76,9 +72,6 @@ void *philosopher(void *num)
 		sleep(RANDOM_TIME);
 
 		grab_chopsticks(*phil_num);
-		printf("Philosopher %d has finished eating. \n", *phil_num);
-		sleep(RANDOM_TIME);
-
 		put_down_chopsticks(*phil_num);
 
 	} while (difftime(current, begin) <= RUNTIME);
