@@ -36,21 +36,27 @@ void *producer(void *index)
         current = time(NULL);
         if (difftime(current, begin) >= RUNTIME)
         {
+            printf("Producer %d: Started exiting loop\n", *((int *)index));
             break;
         }
         item = rand();
         pthread_mutex_lock(&array_lock);
+        printf("Producer %d: Acquire mutex\n", *((int *)index));
         if (isFilled || filled == MAX_SIZE)
         {
+            printf("Producer %d: Waiting for producer thread\n", *((int *)index));
             pthread_cond_wait(&is_ready, &array_lock);
         }
         if (buckets[in] == EMPTY)
         {
+            printf("Producer %d: Insert Item %d To Bucket %d\n", *((int *)index), item, in);
             buckets[in] = item;
             in = (in + 1) % MAX_SIZE;
             filled++;
         }
         isFilled = true;
+
+        printf("Producer %d: Unlock mutex\n", *((int *)index));
         pthread_mutex_unlock(&array_lock);
         pthread_cond_signal(&is_ready);
     }
@@ -58,6 +64,9 @@ void *producer(void *index)
     pthread_mutex_lock(&finished_lock);
 
     finished = true;
+
+    printf("Producer %d: Set finished to true\n", *((int *)index));
+
 
     pthread_mutex_unlock(&finished_lock);
 
@@ -69,14 +78,19 @@ void *consumer(void *index)
     while (true)
     {
         pthread_mutex_lock(&finished_lock);
+        printf("Consumer %d: Lock finished mutex\n", *((int *)index));
         if (finished)
         {
             pthread_mutex_unlock(&finished_lock);
+            printf("Consumer %d: Exiting loop\n", *((int *)index));
+
+            printf("Consumer %d: Unlock finished mutex\n", *((int *)index));
             break;
         }
         pthread_mutex_unlock(&finished_lock);
 
         pthread_mutex_lock(&array_lock);
+        printf("Consumer %d: Acquire mutex\n", *((int *)index));
         if (!isFilled || filled == EMPTY)
         {
             pthread_cond_wait(&is_ready, &array_lock);
@@ -91,6 +105,8 @@ void *consumer(void *index)
             out = (out + 1) % MAX_SIZE;
         }
         isFilled = false;
+        printf("Consumer %d: Unlock mutex\n", *((int *)index));
+
         pthread_mutex_unlock(&array_lock);
         pthread_cond_signal(&is_ready);
     }
@@ -111,6 +127,7 @@ int main()
 
     for (i = 0; i < MAX_SIZE; i++)
     {
+        printf("Adding bucket %d\n", i);
         buckets[i] = EMPTY;
     }
 
@@ -128,6 +145,8 @@ int main()
     }
 
     pthread_mutex_destroy(&array_lock);
+    printf("Program exited successfully\n");
+
 
     return EXIT_SUCCESS;
 }
