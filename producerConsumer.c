@@ -21,7 +21,7 @@ bool finished = false;
 int i;
 int in = 0;
 int out = 0;
-int filled = 0;
+int full = 0;
 time_t begin, current;
 
 int buckets[MAX_SIZE];
@@ -42,7 +42,7 @@ void *producer(void *index)
         item = rand();
         pthread_mutex_lock(&array_lock);
         printf("Producer %d: Acquire mutex\n", *((int *)index));
-        if (isFilled || filled == MAX_SIZE)
+        if (isFilled || full == MAX_SIZE)
         {
             printf("Producer %d: Waiting for producer thread\n", *((int *)index));
             pthread_cond_wait(&is_ready, &array_lock);
@@ -52,7 +52,7 @@ void *producer(void *index)
             printf("Producer %d: Insert Item %d To Bucket %d\n", *((int *)index), item, in);
             buckets[in] = item;
             in = (in + 1) % MAX_SIZE;
-            filled++;
+            full++;
         }
         isFilled = true;
 
@@ -91,7 +91,7 @@ void *consumer(void *index)
 
         pthread_mutex_lock(&array_lock);
         printf("Consumer %d: Acquire mutex\n", *((int *)index));
-        if (!isFilled || filled == EMPTY)
+        if (!isFilled || full == EMPTY)
         {
             pthread_cond_wait(&is_ready, &array_lock);
         }
@@ -100,7 +100,7 @@ void *consumer(void *index)
         {
             int item = buckets[out];
             buckets[out] = EMPTY;
-            filled--;
+            full--;
             printf("Consumer %d: Remove Item %d From Bucket %d\n", *((int *)index), item, out);
             out = (out + 1) % MAX_SIZE;
         }

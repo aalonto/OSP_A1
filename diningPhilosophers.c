@@ -32,11 +32,8 @@ void test_and_eat(int num)
 		phil_states[num] = EATING;
 
 		printf("Philosopher %d is eating.\n", num + 1);
-		sleep(RANDOM_TIME);
 		eat_count[num] += 1;
-
 		sem_post(&phil[num]);
-		printf("Philosopher %d is thinking.\n", num + 1);
 
 	}
 }
@@ -78,10 +75,13 @@ void *philosopher(void *num)
 		sleep(RANDOM_TIME);
 
 		grab_chopsticks(*phil_num);
+		printf("Philosopher %d is eating.\n", *phil_num + 1);
+		sleep(RANDOM_TIME);
 		put_down_chopsticks(*phil_num);
 
 	} while (difftime(current, begin) <= RUNTIME);
 }
+
 
 int main()
 {
